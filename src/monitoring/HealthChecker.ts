@@ -82,6 +82,11 @@ export class HealthChecker extends EventEmitter {
   }
 
   private async checkDatabase(): Promise<boolean> {
+    if (!this.databaseAdapter) {
+      console.log('No database adapter configured for health check');
+      return true;
+    }
+    
     try {
       await this.databaseAdapter.executeQuery('SELECT 1');
       return true;
