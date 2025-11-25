@@ -1,13 +1,11 @@
-import { Configuration, OpenAIApi } from 'openai';
+import { OpenAI } from 'openai';
 import { MigrationStrategy, SchemaDefinition, AIRecommendation, DatabaseConfig } from '../types';
 
 export class AIOptimizer {
-  private openai: OpenAIApi;
-  private configuration: Configuration;
+  private openai: OpenAI;
 
   constructor(apiKey: string) {
-    this.configuration = new Configuration({ apiKey });
-    this.openai = new OpenAIApi(this.configuration);
+    this.openai = new OpenAI({ apiKey });
   }
 
   async optimizeMigrationStrategy(
@@ -23,14 +21,14 @@ export class AIOptimizer {
     const prompt = this.buildOptimizationPrompt(sourceConfig, targetConfig, schema, constraints);
     
     try {
-      const response = await this.openai.createCompletion({
+      const response = await this.openai.completions.create({
         model: 'gpt-4',
         prompt,
         max_tokens: 1500,
         temperature: 0.3,
       });
 
-      const strategies = this.parseStrategies(response.data.choices[0].text || '');
+      const strategies = this.parseStrategies(response.choices[0].text || '');
       return strategies;
     } catch (error) {
       console.error('AI optimization failed:', error);
@@ -42,14 +40,14 @@ export class AIOptimizer {
     const prompt = this.buildSchemaAnalysisPrompt(schema);
     
     try {
-      const response = await this.openai.createCompletion({
+      const response = await this.openai.completions.create({
         model: 'gpt-4',
         prompt,
         max_tokens: 1000,
         temperature: 0.2,
       });
 
-      return this.parseRecommendations(response.data.choices[0].text || '');
+      return this.parseRecommendations(response.choices[0].text || '');
     } catch (error) {
       console.error('Schema analysis failed:', error);
       return [];
@@ -69,14 +67,14 @@ export class AIOptimizer {
     const prompt = this.buildComplexityPrompt(sourceConfig, targetConfig, schema);
     
     try {
-      const response = await this.openai.createCompletion({
+      const response = await this.openai.completions.create({
         model: 'gpt-4',
         prompt,
         max_tokens: 800,
         temperature: 0.1,
       });
 
-      return this.parseComplexityAnalysis(response.data.choices[0].text || '');
+      return this.parseComplexityAnalysis(response.choices[0].text || '');
     } catch (error) {
       console.error('Complexity prediction failed:', error);
       return {
@@ -99,14 +97,14 @@ export class AIOptimizer {
     const prompt = this.buildOptimizationSuggestionsPrompt(currentStrategy, performance);
     
     try {
-      const response = await this.openai.createCompletion({
+      const response = await this.openai.completions.create({
         model: 'gpt-4',
         prompt,
         max_tokens: 600,
         temperature: 0.3,
       });
 
-      return this.parseRecommendations(response.data.choices[0].text || '');
+      return this.parseRecommendations(response.choices[0].text || '');
     } catch (error) {
       console.error('Optimization suggestions failed:', error);
       return [];
