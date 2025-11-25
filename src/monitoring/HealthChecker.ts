@@ -176,7 +176,7 @@ export class HealthChecker extends EventEmitter {
     let totalIdle = 0;
     let totalTick = 0;
 
-    cpus.forEach(cpu => {
+    cpus.forEach((cpu: any) => {
       for (const type in cpu.times) {
         totalTick += cpu.times[type as keyof typeof cpu.times];
       }
@@ -196,6 +196,9 @@ export class HealthChecker extends EventEmitter {
   private async getNetworkLatency(): Promise<number> {
     const start = Date.now();
     try {
+      if (!this.databaseAdapter) {
+        return 0;
+      }
       await this.databaseAdapter.executeQuery('SELECT 1');
       return Date.now() - start;
     } catch (error) {
@@ -204,6 +207,10 @@ export class HealthChecker extends EventEmitter {
   }
 
   private async getDatabaseConnections(): Promise<number> {
+    if (!this.databaseAdapter) {
+      return 0;
+    }
+    
     try {
       let query: string;
       

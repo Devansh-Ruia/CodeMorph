@@ -31,7 +31,7 @@ export class CodeMorphServer {
 
     this.migrationEngine = new MigrationEngine();
     this.aiOptimizer = new AIOptimizer(process.env.OPENAI_API_KEY || '');
-    this.healthChecker = new HealthChecker(null);
+    this.healthChecker = new HealthChecker(null as any);
 
     this.setupMiddleware();
     this.setupRoutes();
