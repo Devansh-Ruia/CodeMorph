@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeMorph - AI-Powered Migration System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center">
+                            <i data-lucide="zap" class="w-8 h-8 text-blue-600 mr-3"></i>
+                            <h1 class="text-xl font-bold text-gray-900">CodeMorph</h1>
+                        </div>
+                        <div class="hidden sm:ml-8 sm:flex sm:space-x-8">
+                            <a href="#dashboard" class="nav-link border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                Dashboard
+                            </a>
+                            <a href="#migrations" class="nav-link border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                Migrations
+                            </a>
+                            <a href="#monitoring" class="nav-link border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                Monitoring
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div id="connection-status" class="flex items-center">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-600">Connected</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Dashboard Overview -->
+            <div id="dashboard" class="mb-8">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Migration Dashboard</h2>
+                    <p class="text-gray-600">Monitor and manage your database migrations</p>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="database" class="w-8 h-8 text-blue-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Active Migrations</p>
+                                <p id="active-migrations" class="text-2xl font-bold text-gray-900">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="check-circle" class="w-8 h-8 text-green-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Completed</p>
+                                <p id="completed-migrations" class="text-2xl font-bold text-gray-900">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="clock" class="w-8 h-8 text-yellow-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">In Progress</p>
+                                <p id="progress-migrations" class="text-2xl font-bold text-gray-900">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="alert-triangle" class="w-8 h-8 text-red-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Failed</p>
+                                <p id="failed-migrations" class="text-2xl font-bold text-gray-900">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Health -->
+                <div class="bg-white rounded-lg shadow mb-8">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">System Health</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div class="health-check" data-service="database">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-600">Database</span>
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full health-indicator"></div>
+                                </div>
+                            </div>
+                            <div class="health-check" data-service="redis">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-600">Redis</span>
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full health-indicator"></div>
+                                </div>
+                            </div>
+                            <div class="health-check" data-service="ai">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-600">AI Service</span>
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full health-indicator"></div>
+                                </div>
+                            </div>
+                            <div class="health-check" data-service="storage">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-600">Storage</span>
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full health-indicator"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button onclick="showCreateMigrationModal()" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+                                Create Migration
+                            </button>
+                            <button onclick="analyzeSchema()" class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <i data-lucide="search" class="w-4 h-4 mr-2"></i>
+                                Analyze Schema
+                            </button>
+                            <button onclick="refreshData()" class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Migrations List -->
+            <div id="migrations" class="mb-8">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-lg font-medium text-gray-900">Recent Migrations</h3>
+                        <button onclick="showCreateMigrationModal()" class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i data-lucide="plus" class="w-4 h-4 mr-1"></i>
+                            New Migration
+                        </button>
+                    </div>
+                    <div class="overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Migration</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Strategy</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="migrations-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Migration rows will be inserted here -->
+                            </tbody>
+                        </table>
+                        <div id="no-migrations" class="text-center py-8 text-gray-500">
+                            <i data-lucide="database" class="w-12 h-12 mx-auto mb-4 text-gray-400"></i>
+                            <p>No migrations yet. Create your first migration to get started.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Create Migration Modal -->
+        <div id="create-migration-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+                <div class="mt-3">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Create New Migration</h3>
+                    
+                    <form id="migration-form" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Source Database Type</label>
+                                <select name="sourceType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="postgresql">PostgreSQL</option>
+                                    <option value="mysql">MySQL</option>
+                                    <option value="mongodb">MongoDB</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Target Database Type</label>
+                                <select name="targetType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="postgresql">PostgreSQL</option>
+                                    <option value="mysql">MySQL</option>
+                                    <option value="mongodb">MongoDB</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Source Host</label>
+                                <input type="text" name="sourceHost" placeholder="localhost" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Source Port</label>
+                                <input type="number" name="sourcePort" placeholder="5432" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Target Host</label>
+                                <input type="text" name="targetHost" placeholder="localhost" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Target Port</label>
+                                <input type="number" name="targetPort" placeholder="3306" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Priority</label>
+                                <select name="priority" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="speed">Speed</option>
+                                    <option value="safety">Safety</option>
+                                    <option value="cost">Cost</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Max Downtime (ms)</label>
+                                <input type="number" name="maxDowntime" placeholder="5000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Schema (JSON)</label>
+                            <textarea name="schema" rows="6" placeholder='{"version": "1.0", "tables": [{"name": "users", "columns": [{"name": "id", "type": "integer", "nullable": false}]}]}' class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 pt-4">
+                            <button type="button" onclick="hideCreateMigrationModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Cancel
+                            </button>
+                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Create Migration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Socket.io connection
+        const socket = io();
+        let migrations = [];
+
+        // Socket event handlers
+        socket.on('connect', () => {
+            updateConnectionStatus(true);
+        });
+
+        socket.on('disconnect', () => {
+            updateConnectionStatus(false);
+        });
+
+        socket.on('migration-created', (migration) => {
+            migrations.push(migration);
+            updateMigrationsTable();
+            updateStats();
+        });
+
+        socket.on('migration-updated', (migration) => {
+            const index = migrations.findIndex(m => m.id === migration.id);
+            if (index !== -1) {
+                migrations[index] = migration;
+                updateMigrationsTable();
+                updateStats();
+            }
+        });
+
+        socket.on('health-status-changed', (health) => {
+            updateHealthIndicators(health);
+        });
+
+        // UI Functions
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connection-status');
+            const dotEl = statusEl.querySelector('div');
+            const textEl = statusEl.querySelector('span');
+            
+            if (connected) {
+                dotEl.className = 'w-2 h-2 bg-green-500 rounded-full mr-2';
+                textEl.textContent = 'Connected';
+            } else {
+                dotEl.className = 'w-2 h-2 bg-red-500 rounded-full mr-2';
+                textEl.textContent = 'Disconnected';
+            }
+        }
+
+        function updateHealthIndicators(health) {
+            Object.keys(health.checks).forEach(service => {
+                const indicator = document.querySelector(`[data-service="${service}"] .health-indicator`);
+                if (indicator) {
+                    if (health.checks[service]) {
+                        indicator.className = 'w-2 h-2 bg-green-500 rounded-full health-indicator';
+                    } else {
+                        indicator.className = 'w-2 h-2 bg-red-500 rounded-full health-indicator';
+                    }
+                }
+            });
+        }
+
+        function updateStats() {
+            const active = migrations.filter(m => m.status === 'running').length;
+            const completed = migrations.filter(m => m.status === 'completed').length;
+            const progress = migrations.filter(m => m.status === 'running' || m.status === 'paused').length;
+            const failed = migrations.filter(m => m.status === 'failed').length;
+
+            document.getElementById('active-migrations').textContent = active;
+            document.getElementById('completed-migrations').textContent = completed;
+            document.getElementById('progress-migrations').textContent = progress;
+            document.getElementById('failed-migrations').textContent = failed;
+        }
+
+        function updateMigrationsTable() {
+            const tbody = document.getElementById('migrations-table-body');
+            const noMigrations = document.getElementById('no-migrations');
+            
+            if (migrations.length === 0) {
+                tbody.innerHTML = '';
+                noMigrations.style.display = 'block';
+                return;
+            }
+            
+            noMigrations.style.display = 'none';
+            tbody.innerHTML = migrations.map(migration => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${migration.id.substring(0, 8)}</div>
+                        <div class="text-sm text-gray-500">${migration.sourceDatabase.type} → ${migration.targetDatabase.type}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(migration.status)}">
+                            ${migration.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="text-sm text-gray-900 mr-2">${Math.round(migration.progress)}%</div>
+                            <div class="w-16 bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: ${migration.progress}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${migration.strategy.name}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${migration.startTime ? new Date(migration.startTime).toLocaleTimeString() : '-'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex space-x-2">
+                            ${getActionButtons(migration)}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Re-initialize Lucide icons
+            lucide.createIcons();
+        }
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'running': return 'bg-green-100 text-green-800';
+                case 'completed': return 'bg-blue-100 text-blue-800';
+                case 'failed': return 'bg-red-100 text-red-800';
+                case 'paused': return 'bg-yellow-100 text-yellow-800';
+                case 'pending': return 'bg-gray-100 text-gray-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function getActionButtons(migration) {
+            switch (migration.status) {
+                case 'pending':
+                    return `
+                        <button onclick="startMigration('${migration.id}')" class="text-green-600 hover:text-green-900">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                        </button>
+                    `;
+                case 'running':
+                    return `
+                        <button onclick="pauseMigration('${migration.id}')" class="text-yellow-600 hover:text-yellow-900">
+                            <i data-lucide="pause" class="w-4 h-4"></i>
+                        </button>
+                    `;
+                case 'paused':
+                    return `
+                        <button onclick="resumeMigration('${migration.id}')" class="text-green-600 hover:text-green-900">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                        </button>
+                    `;
+                case 'completed':
+                    return migration.strategy.rollbackSupported ? `
+                        <button onclick="rollbackMigration('${migration.id}')" class="text-orange-600 hover:text-orange-900">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                        </button>
+                    ` : '';
+                case 'failed':
+                    return `
+                        <button onclick="retryMigration('${migration.id}')" class="text-blue-600 hover:text-blue-900">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </button>
+                    `;
+                default:
+                    return '';
+            }
+        }
+
+        // Modal functions
+        function showCreateMigrationModal() {
+            document.getElementById('create-migration-modal').classList.remove('hidden');
+        }
+
+        function hideCreateMigrationModal() {
+            document.getElementById('create-migration-modal').classList.add('hidden');
+        }
+
+        // Migration actions
+        async function startMigration(id) {
+            try {
+                const response = await fetch(`/api/migrations/${id}/start`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to start migration');
+            } catch (error) {
+                console.error('Error starting migration:', error);
+                alert('Failed to start migration');
+            }
+        }
+
+        async function pauseMigration(id) {
+            try {
+                const response = await fetch(`/api/migrations/${id}/pause`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to pause migration');
+            } catch (error) {
+                console.error('Error pausing migration:', error);
+                alert('Failed to pause migration');
+            }
+        }
+
+        async function resumeMigration(id) {
+            try {
+                const response = await fetch(`/api/migrations/${id}/resume`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to resume migration');
+            } catch (error) {
+                console.error('Error resuming migration:', error);
+                alert('Failed to resume migration');
+            }
+        }
+
+        async function rollbackMigration(id) {
+            if (!confirm('Are you sure you want to rollback this migration?')) return;
+            
+            try {
+                const response = await fetch(`/api/migrations/${id}/rollback`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to rollback migration');
+            } catch (error) {
+                console.error('Error rolling back migration:', error);
+                alert('Failed to rollback migration');
+            }
+        }
+
+        async function retryMigration(id) {
+            try {
+                const response = await fetch(`/api/migrations/${id}/start`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to retry migration');
+            } catch (error) {
+                console.error('Error retrying migration:', error);
+                alert('Failed to retry migration');
+            }
+        }
+
+        // Form submission
+        document.getElementById('migration-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const migrationData = {
+                sourceDatabase: {
+                    type: formData.get('sourceType'),
+                    host: formData.get('sourceHost'),
+                    port: parseInt(formData.get('sourcePort')),
+                    database: 'source_db',
+                    username: 'user',
+                    password: 'password'
+                },
+                targetDatabase: {
+                    type: formData.get('targetType'),
+                    host: formData.get('targetHost'),
+                    port: parseInt(formData.get('targetPort')),
+                    database: 'target_db',
+                    username: 'user',
+                    password: 'password'
+                },
+                schema: JSON.parse(formData.get('schema')),
+                constraints: {
+                    priority: formData.get('priority'),
+                    maxDowntime: parseInt(formData.get('maxDowntime')) || 5000
+                }
+            };
+
+            try {
+                const response = await fetch('/api/migrations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(migrationData)
+                });
+
+                if (!response.ok) throw new Error('Failed to create migration');
+                
+                const result = await response.json();
+                hideCreateMigrationModal();
+                e.target.reset();
+                
+                // Auto-start the migration
+                await startMigration(result.job.id);
+            } catch (error) {
+                console.error('Error creating migration:', error);
+                alert('Failed to create migration: ' + error.message);
+            }
+        });
+
+        // Utility functions
+        async function analyzeSchema() {
+            const schema = prompt('Enter schema JSON:');
+            if (!schema) return;
+
+            try {
+                const response = await fetch('/api/analyze-schema', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ schema: JSON.parse(schema) })
+                });
+
+                if (!response.ok) throw new Error('Failed to analyze schema');
+                
+                const recommendations = await response.json();
+                alert('Schema analysis complete. Check console for recommendations.');
+                console.log('Recommendations:', recommendations);
+            } catch (error) {
+                console.error('Error analyzing schema:', error);
+                alert('Failed to analyze schema');
+            }
+        }
+
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/migrations');
+                if (!response.ok) throw new Error('Failed to fetch migrations');
+                
+                migrations = await response.json();
+                updateMigrationsTable();
+                updateStats();
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await refreshData();
+            
+            // Load initial health status
+            try {
+                const response = await fetch('/api/health');
+                if (response.ok) {
+                    const health = await response.json();
+                    updateHealthIndicators(health.health);
+                }
+            } catch (error) {
+                console.error('Error loading health status:', error);
+            }
+        });
+    </script>
+</body>
+</html>
