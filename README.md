@@ -340,9 +340,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- 📧 Email: support@codemorph.dev
-- 💬 Discord: [Join our community](https://discord.gg/codemorph)
-- 📖 Documentation: [docs.codemorph.dev](https://docs.codemorph.dev)
+- 📧 Email: ruiadevansh@gmail.com
+- 💬 Discord: [Join our community]
+- 📖 Documentation: [docs.codemorph.dev]
 
 ## 🗺️ Roadmap
 
@@ -356,4 +356,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ by the CodeMorph Team**
